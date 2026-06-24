@@ -12,11 +12,22 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { auth } from './firebase';
+
+function getCurrentUid() {
+  return auth.currentUser?.uid || null;
+}
 
 export async function getAll(collectionName) {
-  const q = query(collection(db, collectionName), orderBy('createdAt', 'desc'));
+  const uid = getCurrentUid();
+  let q;
+  if (uid) {
+    q = query(collection(db, collectionName), where('ownerId', '==', uid), orderBy('createdAt', 'desc'));
+  } else {
+    q = query(collection(db, collectionName), orderBy('createdAt', 'desc'));
+  }
   const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
 export async function getById(collectionName, id) {
@@ -27,8 +38,10 @@ export async function getById(collectionName, id) {
 }
 
 export async function create(collectionName, data) {
+  const uid = getCurrentUid();
   const docRef = await addDoc(collection(db, collectionName), {
     ...data,
+    ownerId: uid,
     createdAt: serverTimestamp()
   });
   return docRef.id;
@@ -50,9 +63,15 @@ export async function remove(collectionName, id) {
 }
 
 export async function getByField(collectionName, fieldName, value) {
-  const q = query(collection(db, collectionName), where(fieldName, '==', value));
+  const uid = getCurrentUid();
+  let q;
+  if (uid) {
+    q = query(collection(db, collectionName), where(fieldName, '==', value), where('ownerId', '==', uid));
+  } else {
+    q = query(collection(db, collectionName), where(fieldName, '==', value));
+  }
   const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
 export async function getSingleByField(collectionName, fieldName, value) {

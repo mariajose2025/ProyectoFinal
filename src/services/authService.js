@@ -55,6 +55,7 @@ export async function loginWithGoogle() {
         birthDate: '',
         sex: '',
         age: 0,
+        photoURL: result.user.photoURL || '',
         roleId: '',
         roleName: 'Vendedor',
         createdAt: new Date()
@@ -62,8 +63,10 @@ export async function loginWithGoogle() {
     }
     return { success: true, user: result.user };
   } catch (error) {
-    authStore.setError(getErrorMessage(error.code));
-    return { success: false, error: getErrorMessage(error.code) };
+    console.error('Google sign-in error:', error);
+    const msg = getErrorMessage(error.code);
+    authStore.setError(msg);
+    return { success: false, error: msg };
   }
 }
 
@@ -73,7 +76,11 @@ export async function login(email, password) {
     const result = await signInWithEmailAndPassword(auth, email, password);
 
     if (!result.user.emailVerified) {
-      await sendEmailVerification(result.user);
+      try {
+        await sendEmailVerification(result.user);
+      } catch (e) {
+        console.warn('No se pudo enviar verificación:', e);
+      }
       return { success: true, user: result.user, emailNotVerified: true };
     }
 
@@ -96,11 +103,16 @@ export async function register(email, password, userData) {
       birthDate: userData.birthDate || '',
       sex: userData.sex || '',
       age: userData.age || 0,
+      photoURL: '',
       roleId: '',
       roleName: 'Vendedor',
       createdAt: new Date()
     });
-    await sendEmailVerification(result.user);
+    try {
+      await sendEmailVerification(result.user);
+    } catch (e) {
+      console.warn('Error enviando verificación:', e);
+    }
     return { success: true, user: result.user };
   } catch (error) {
     authStore.setError(getErrorMessage(error.code));
@@ -150,7 +162,10 @@ function getErrorMessage(code) {
     'auth/too-many-requests': 'Demasiados intentos. Intenta más tarde',
     'auth/invalid-credential': 'Credenciales inválidas',
     'auth/popup-closed-by-user': 'Se cerró la ventana de Google',
-    'auth/popup-blocked': 'El navegador bloqueó la ventana emergente'
+    'auth/popup-blocked': 'El navegador bloqueó la ventana emergente. Permite popups para este sitio.',
+    'auth/account-exists-with-different-credential': 'Ya existe una cuenta con este correo usando otro método de inicio de sesión',
+    'auth/operation-not-allowed': 'El inicio de sesión con Google no está habilitado. Actívalo en la consola de Firebase.',
+    'auth/unauthorized-domain': 'Este dominio no está autorizado. Agrégalo en Firebase Console > Authentication > Settings'
   };
-  return messages[code] || 'Error de autenticación';
+  return messages[code] || `Error de autenticación (${code})`;
 }

@@ -30,14 +30,21 @@
 
   let appReady = false;
   let needsSetup = false;
+  let currentPath = '';
 
   $: if (appReady && !$isAuthenticated) {
     const hash = window.location.hash || '#/';
     const path = hash.replace('#', '');
+    currentPath = path;
     if (path.startsWith('/admin') || path === '/perfil') {
       push('/');
     }
+  } else {
+    const hash = window.location.hash || '#/';
+    currentPath = hash.replace('#', '');
   }
+
+  $: showFooter = currentPath !== '/' && currentPath !== '' && (currentPath === '/nosotros' || currentPath === '/login' || currentPath === '/registro' || currentPath === '/perfil' || currentPath.startsWith('/admin'));
 
   const publicOnlyRoutes = {
     '/': Home,
@@ -137,7 +144,9 @@
     {/if}
   </div>
 
-  <Footer />
+  {#if showFooter}
+    <Footer />
+  {/if}
 </main>
 
 <style>

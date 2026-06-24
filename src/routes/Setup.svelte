@@ -93,6 +93,7 @@
       const catSnapshot = await getDocs(collection(db, 'categories'));
       if (catSnapshot.empty) {
         toast = { show: true, message: 'Creando categorías de ejemplo...', type: 'info' };
+        const uid = auth.currentUser?.uid || '';
         const categories = [
           { name: 'Bebidas', description: 'Gaseosas, jugos, aguas y bebidas en general' },
           { name: 'Paquetes', description: 'Productos en paquete y presentaciones familiares' },
@@ -104,7 +105,7 @@
         ];
         for (const cat of categories) {
           const catRef = doc(collection(db, 'categories'));
-          await setDoc(catRef, { ...cat, createdAt: new Date() });
+          await setDoc(catRef, { ...cat, ownerId: uid, createdAt: new Date() });
         }
       }
 
@@ -112,6 +113,7 @@
       const prodSnapshot = await getDocs(collection(db, 'products'));
       if (prodSnapshot.empty) {
         toast = { show: true, message: 'Creando productos de ejemplo...', type: 'info' };
+        const uid = auth.currentUser?.uid || '';
         const catSnap = await getDocs(collection(db, 'categories'));
         const catMap = {};
         catSnap.forEach(d => { catMap[d.data().name] = d.id; });
@@ -133,7 +135,7 @@
         for (const prod of products) {
           const prodRef = doc(collection(db, 'products'));
           const barcode = (Date.now().toString().slice(-8) + String(products.indexOf(prod)).padStart(4, '0')).slice(0, 12);
-          await setDoc(prodRef, { ...prod, barcode, createdAt: new Date() });
+          await setDoc(prodRef, { ...prod, barcode, ownerId: uid, createdAt: new Date() });
         }
       }
 
