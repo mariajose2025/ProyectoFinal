@@ -4,11 +4,15 @@ import {
   signOut,
   updatePassword,
   onAuthStateChanged,
-  sendEmailVerification
+  sendEmailVerification,
+  GoogleAuthProvider,
+  signInWithPopup
 } from 'firebase/auth';
 import { auth, db } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth as authStore } from '../stores/auth';
+
+const googleProvider = new GoogleAuthProvider();
 
 export function initAuthListener() {
   onAuthStateChanged(auth, async (firebaseUser) => {
@@ -37,6 +41,32 @@ export function initAuthListener() {
   });
 }
 
+export async function loginWithGoogle() {
+  try {
+    authStore.setLoading(true);
+    const result = await signInWithPopup(auth, googleProvider);
+    const userDoc = await getDoc(doc(db, 'users', result.user.uid));
+    if (!userDoc.exists()) {
+      await setDoc(doc(db, 'users', result.user.uid), {
+        name: result.user.displayName || '',
+        email: result.user.email,
+        phone: '',
+        cedula: '',
+        birthDate: '',
+        sex: '',
+        age: 0,
+        roleId: '',
+        roleName: 'Vendedor',
+        createdAt: new Date()
+      });
+    }
+    return { success: true, user: result.user };
+  } catch (error) {
+    authStore.setError(getErrorMessage(error.code));
+    return { success: false, error: getErrorMessage(error.code) };
+  }
+}
+
 export async function login(email, password) {
   try {
     authStore.setLoading(true);
@@ -59,11 +89,16 @@ export async function register(email, password, userData) {
     authStore.setLoading(true);
     const result = await createUserWithEmailAndPassword(auth, email, password);
     await setDoc(doc(db, 'users', result.user.uid), {
-      name: userData.name,
+      name: userData.name || '',
+      cedula: userData.cedula || '',
       email: email,
       phone: userData.phone || '',
-      roleId: userData.roleId || '',
-      roleName: userData.roleName || 'Vendedor'
+      birthDate: userData.birthDate || '',
+      sex: userData.sex || '',
+      age: userData.age || 0,
+      roleId: '',
+      roleName: 'Vendedor',
+      createdAt: new Date()
     });
     await sendEmailVerification(result.user);
     return { success: true, user: result.user };
@@ -113,7 +148,9 @@ function getErrorMessage(code) {
     'auth/weak-password': 'La contraseña debe tener al menos 6 caracteres',
     'auth/invalid-email': 'Correo electrónico inválido',
     'auth/too-many-requests': 'Demasiados intentos. Intenta más tarde',
-    'auth/invalid-credential': 'Credenciales inválidas'
+    'auth/invalid-credential': 'Credenciales inválidas',
+    'auth/popup-closed-by-user': 'Se cerró la ventana de Google',
+    'auth/popup-blocked': 'El navegador bloqueó la ventana emergente'
   };
   return messages[code] || 'Error de autenticación';
 }

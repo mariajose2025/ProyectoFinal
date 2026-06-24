@@ -377,7 +377,7 @@
 
             {#if product.barcode}
               <div class="barcode-container">
-                <svg class="barcode-svg" use:renderBarcode={product.barcode}></svg>
+                <div class="barcode-wrap" use:renderBarcode={product.barcode}></div>
               </div>
             {/if}
           </div>
@@ -506,7 +506,7 @@
   <svelte:fragment slot="footer">
     {#if editingProduct && editingProduct.barcode}
       <div class="modal-barcode">
-        <svg class="barcode-svg-modal" use:renderBarcode={editingProduct.barcode}></svg>
+        <div class="barcode-wrap-modal" use:renderBarcode={editingProduct.barcode}></div>
         <span class="barcode-label">Código: {editingProduct.barcode}</span>
       </div>
     {/if}
@@ -621,7 +621,11 @@
     justify-content: center;
   }
 
-  .barcode-svg {
+  .barcode-wrap {
+    display: inline-block;
+  }
+
+  .barcode-wrap :global(svg) {
     max-width: 160px;
     height: auto;
   }
@@ -638,7 +642,11 @@
     flex: 1;
   }
 
-  .barcode-svg-modal {
+  .barcode-wrap-modal {
+    display: inline-block;
+  }
+
+  .barcode-wrap-modal :global(svg) {
     max-width: 200px;
     height: auto;
   }

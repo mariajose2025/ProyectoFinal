@@ -12,6 +12,7 @@
 
   import Home from './routes/Home.svelte';
   import Login from './routes/Login.svelte';
+  import Register from './routes/Register.svelte';
   import Setup from './routes/Setup.svelte';
   import Dashboard from './routes/Dashboard.svelte';
   import Products from './routes/Products.svelte';
@@ -41,6 +42,7 @@
   const publicOnlyRoutes = {
     '/': Home,
     '/login': Login,
+    '/registro': Register,
     '/setup': Setup,
     '/nosotros': About
   };
