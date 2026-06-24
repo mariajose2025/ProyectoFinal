@@ -132,7 +132,8 @@
         ];
         for (const prod of products) {
           const prodRef = doc(collection(db, 'products'));
-          await setDoc(prodRef, { ...prod, createdAt: new Date() });
+          const barcode = (Date.now().toString().slice(-8) + String(products.indexOf(prod)).padStart(4, '0')).slice(0, 12);
+          await setDoc(prodRef, { ...prod, barcode, createdAt: new Date() });
         }
       }
 

@@ -3,7 +3,8 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updatePassword,
-  onAuthStateChanged
+  onAuthStateChanged,
+  sendEmailVerification
 } from 'firebase/auth';
 import { auth, db } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -18,12 +19,14 @@ export function initAuthListener() {
         authStore.setUser({
           uid: firebaseUser.uid,
           email: firebaseUser.email,
+          emailVerified: firebaseUser.emailVerified,
           ...userData
         });
       } else {
         authStore.setUser({
           uid: firebaseUser.uid,
           email: firebaseUser.email,
+          emailVerified: firebaseUser.emailVerified,
           name: firebaseUser.email,
           roleName: 'Vendedor'
         });
@@ -38,6 +41,12 @@ export async function login(email, password) {
   try {
     authStore.setLoading(true);
     const result = await signInWithEmailAndPassword(auth, email, password);
+
+    if (!result.user.emailVerified) {
+      await sendEmailVerification(result.user);
+      return { success: true, user: result.user, emailNotVerified: true };
+    }
+
     return { success: true, user: result.user };
   } catch (error) {
     authStore.setError(getErrorMessage(error.code));
@@ -56,9 +65,21 @@ export async function register(email, password, userData) {
       roleId: userData.roleId || '',
       roleName: userData.roleName || 'Vendedor'
     });
+    await sendEmailVerification(result.user);
     return { success: true, user: result.user };
   } catch (error) {
     authStore.setError(getErrorMessage(error.code));
+    return { success: false, error: getErrorMessage(error.code) };
+  }
+}
+
+export async function resendVerificationEmail() {
+  try {
+    const user = auth.currentUser;
+    if (!user) throw new Error('No hay usuario autenticado');
+    await sendEmailVerification(user);
+    return { success: true };
+  } catch (error) {
     return { success: false, error: getErrorMessage(error.code) };
   }
 }

@@ -11,6 +11,8 @@
   import Modal from '../components/common/Modal.svelte';
   import Toast from '../components/common/Toast.svelte';
   import { uploadProductImage } from '../services/storageService';
+  import { createProduct } from '../services/productService';
+  import JsBarcode from 'jsbarcode';
 
   let products = [];
   let categories = [];
@@ -241,7 +243,7 @@
         await update('products', editingProduct.id, data);
         toast = { show: true, message: 'Producto actualizado con éxito', type: 'success' };
       } else {
-        await create('products', data);
+        await createProduct(data);
         toast = { show: true, message: 'Producto registrado con éxito', type: 'success' };
       }
       closeModal();
@@ -280,6 +282,30 @@
     const d = expiryDate.toDate ? expiryDate.toDate() : new Date(expiryDate);
     if (isNaN(d.getTime())) return 'Fecha inválida';
     return d.toLocaleDateString('es-CO');
+  }
+
+  function renderBarcode(element, code) {
+    if (!element || !code) return;
+    try {
+      JsBarcode(element, code, {
+        format: 'CODE128',
+        width: 1.2,
+        height: 30,
+        displayValue: true,
+        fontSize: 11,
+        margin: 2,
+        background: 'transparent',
+        lineColor: '#1f2937'
+      });
+    } catch (e) {
+      console.warn('Error rendering barcode:', code, e);
+    }
+  }
+
+  function generateLocalBarcode() {
+    const timestamp = Date.now().toString();
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return (timestamp.slice(-8) + random).slice(0, 12);
   }
 </script>
 
@@ -348,6 +374,12 @@
                 </div>
               {/if}
             </div>
+
+            {#if product.barcode}
+              <div class="barcode-container">
+                <svg class="barcode-svg" use:renderBarcode={product.barcode}></svg>
+              </div>
+            {/if}
           </div>
         </div>
 
@@ -472,6 +504,12 @@
   </div>
 
   <svelte:fragment slot="footer">
+    {#if editingProduct && editingProduct.barcode}
+      <div class="modal-barcode">
+        <svg class="barcode-svg-modal" use:renderBarcode={editingProduct.barcode}></svg>
+        <span class="barcode-label">Código: {editingProduct.barcode}</span>
+      </div>
+    {/if}
     <Button variant="secondary" on:click={closeModal}>Cancelar</Button>
     <Button on:click={saveProduct} {loading}>{editingProduct ? 'Actualizar' : 'Crear'}</Button>
   </svelte:fragment>
@@ -574,6 +612,42 @@
   .btn-icon.delete:hover { background: #FEE2E2; }
 
   .empty { text-align: center; color: #9ca3af; padding: 2rem; }
+
+  .barcode-container {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #f3f4f6;
+    display: flex;
+    justify-content: center;
+  }
+
+  .barcode-svg {
+    max-width: 160px;
+    height: auto;
+  }
+
+  .modal-barcode {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.75rem;
+    background: #f9fafb;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    flex: 1;
+  }
+
+  .barcode-svg-modal {
+    max-width: 200px;
+    height: auto;
+  }
+
+  .barcode-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: 500;
+  }
 
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
   .form-group { margin-bottom: 0.85rem; }

@@ -8,6 +8,7 @@
   import { app } from './stores/app';
   import { isAuthenticated, currentUser } from './stores/auth';
   import Navbar from './components/common/Navbar.svelte';
+  import Footer from './components/common/Footer.svelte';
 
   import Home from './routes/Home.svelte';
   import Login from './routes/Login.svelte';
@@ -133,6 +134,8 @@
       </div>
     {/if}
   </div>
+
+  <Footer />
 </main>
 
 <style>

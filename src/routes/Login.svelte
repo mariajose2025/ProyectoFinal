@@ -1,6 +1,6 @@
 <script>
   import { link, push } from 'svelte-spa-router';
-  import { login } from '../services/authService';
+  import { login, resendVerificationEmail } from '../services/authService';
   import Button from '../components/common/Button.svelte';
   import Toast from '../components/common/Toast.svelte';
 
@@ -8,6 +8,8 @@
   let password = '';
   let loading = false;
   let toast = { show: false, message: '', type: 'info' };
+  let emailNotVerified = false;
+  let resendingVerification = false;
 
   async function handleLogin() {
     if (!email || !password) {
@@ -16,15 +18,37 @@
     }
 
     loading = true;
+    emailNotVerified = false;
     const result = await login(email, password);
     loading = false;
 
     if (result.success) {
-      toast = { show: true, message: 'Inicio de sesión exitoso', type: 'success' };
-      setTimeout(() => push('/admin'), 500);
+      if (result.emailNotVerified) {
+        emailNotVerified = true;
+        toast = { show: true, message: 'Correo no verificado. Se envió un enlace de verificación a tu correo.', type: 'warning' };
+      } else {
+        toast = { show: true, message: 'Inicio de sesión exitoso', type: 'success' };
+        setTimeout(() => push('/admin'), 500);
+      }
     } else {
       toast = { show: true, message: result.error, type: 'error' };
     }
+  }
+
+  async function handleResendVerification() {
+    resendingVerification = true;
+    const result = await resendVerificationEmail();
+    resendingVerification = false;
+
+    if (result.success) {
+      toast = { show: true, message: 'Correo de verificación reenviado a ' + email, type: 'success' };
+    } else {
+      toast = { show: true, message: result.error || 'Error al reenviar verificación', type: 'error' };
+    }
+  }
+
+  function handleGoToLogin() {
+    emailNotVerified = false;
   }
 </script>
 
@@ -36,33 +60,49 @@
       <p class="subtitle">Sistema de Tienda de Barrio</p>
     </div>
 
-    <form on:submit|preventDefault={handleLogin}>
-      <div class="form-group">
-        <label for="email">Correo electrónico</label>
-        <input
-          id="email"
-          type="email"
-          bind:value={email}
-          placeholder="tucorreo@email.com"
-          required
-        />
+    {#if emailNotVerified}
+      <div class="verify-container">
+        <div class="verify-icon"><i class="fa-solid fa-envelope-circle-check"></i></div>
+        <h2>Verifica tu correo</h2>
+        <p>Se envió un enlace de verificación a <strong>{email}</strong>. Revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta.</p>
+        <div class="verify-actions">
+          <Button fullWidth={true} on:click={handleResendVerification} loading={resendingVerification}>
+            <i class="fa-solid fa-paper-plane"></i> Reenviar Correo de Verificación
+          </Button>
+          <button class="btn-back" on:click={handleGoToLogin}>
+            <i class="fa-solid fa-arrow-left"></i> Volver al inicio de sesión
+          </button>
+        </div>
       </div>
+    {:else}
+      <form on:submit|preventDefault={handleLogin}>
+        <div class="form-group">
+          <label for="email">Correo electrónico</label>
+          <input
+            id="email"
+            type="email"
+            bind:value={email}
+            placeholder="tucorreo@email.com"
+            required
+          />
+        </div>
 
-      <div class="form-group">
-        <label for="password">Contraseña</label>
-        <input
-          id="password"
-          type="password"
-          bind:value={password}
-          placeholder="••••••••"
-          required
-        />
-      </div>
+        <div class="form-group">
+          <label for="password">Contraseña</label>
+          <input
+            id="password"
+            type="password"
+            bind:value={password}
+            placeholder="••••••••"
+            required
+          />
+        </div>
 
-      <Button type="submit" {loading} fullWidth={true}>
-        Iniciar Sesión
-      </Button>
-    </form>
+        <Button type="submit" {loading} fullWidth={true}>
+          Iniciar Sesión
+        </Button>
+      </form>
+    {/if}
   </div>
 </div>
 
@@ -144,5 +184,51 @@
     outline: none;
     border-color: #B31A1A;
     box-shadow: 0 0 0 3px rgba(179,26,26,0.1);
+  }
+
+  .verify-container {
+    text-align: center;
+  }
+
+  .verify-icon {
+    font-size: 3rem;
+    color: #F2C12E;
+    margin-bottom: 1rem;
+  }
+
+  .verify-container h2 {
+    font-size: 1.3rem;
+    color: #110F0F;
+    margin: 0 0 0.75rem;
+  }
+
+  .verify-container p {
+    color: #6b7280;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin: 0 0 1.5rem;
+  }
+
+  .verify-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .btn-back {
+    background: none;
+    border: none;
+    color: #6b7280;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+
+  .btn-back:hover {
+    color: #B31A1A;
   }
 </style>
